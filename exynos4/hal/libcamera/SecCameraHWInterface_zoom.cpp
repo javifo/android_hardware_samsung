@@ -3813,28 +3813,7 @@ static int HAL_getNumberOfCameras()
 {
     ALOGV("%s", __func__);
 
-    int cam_fd;
-    static struct v4l2_input input;
-
-    cam_fd = open(CAMERA_DEV_NAME, O_RDONLY);
-    if (cam_fd < 0) {
-        ALOGE("ERR(%s):Cannot open %s (error : %s)", __func__, CAMERA_DEV_NAME, strerror(errno));
-        return -1;
-    }
-
-    input.index = 0;
-    while (ioctl(cam_fd, VIDIOC_ENUMINPUT, &input) == 0) {
-        ALOGI("Name of input channel[%d] is %s", input.index, input.name);
-
-        if (!strncmp((const char *)input.name, "WriteBack", 9))
-            break;
-
-        input.index++;
-    }
-
-    close(cam_fd);
-
-    return input.index;
+    return 2;
 }
 
 static int HAL_getCameraInfo(int cameraId, struct camera_info *cameraInfo)

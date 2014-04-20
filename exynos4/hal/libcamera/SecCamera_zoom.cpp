@@ -4463,6 +4463,12 @@ bool SecCamera::setMaxSize(void)
         m_snapshot_max_width  = 3264;
         m_snapshot_max_height = 2448;
         return true;
+    } else if(!strncmp(sensor_name, "S5C73M3", 10)) {
+        m_preview_max_width   = 1280;
+        m_preview_max_height  = 720;
+        m_snapshot_max_width  = 3264;
+        m_snapshot_max_height = 2448;
+        return true;
     } else
         return false;
 }
