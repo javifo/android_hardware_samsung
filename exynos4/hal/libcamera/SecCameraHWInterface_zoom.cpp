@@ -19,7 +19,7 @@
 #define LOG_TAG "CameraHardwareSec"
 #include <utils/Log.h>
 
-#include "SecCameraHWInterface.h"
+#include "SecCameraHWInterface_zoom.h"
 #include <utils/threads.h>
 #include <fcntl.h>
 #include <sys/mman.h>

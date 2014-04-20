@@ -30,7 +30,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <sys/poll.h>
-#include "SecCamera.h"
+#include "SecCamera_zoom.h"
 #include "cutils/properties.h"
 
 using namespace android;

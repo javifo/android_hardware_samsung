@@ -19,7 +19,7 @@
 #ifndef ANDROID_HARDWARE_CAMERA_HARDWARE_SEC_H
 #define ANDROID_HARDWARE_CAMERA_HARDWARE_SEC_H
 
-#include "SecCamera.h"
+#include "SecCamera_zoom.h"
 #include <utils/threads.h>
 #include <utils/RefBase.h>
 #include <binder/MemoryBase.h>
