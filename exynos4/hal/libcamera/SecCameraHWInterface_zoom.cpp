@@ -185,9 +185,7 @@ void CameraHardwareSec::initDefaultParameters(int cameraId)
     mCameraID = cameraId;
     mUseInternalISP = mSecCamera->getUseInternalISP();
 
-    const char *CameraSensorName = (const char*)mSecCamera->getCameraSensorName();
-
-    if (!strncmp(CameraSensorName, "S5K3H2", 10)) {
+    if (!strncmp(mCameraSensorName, "S5K3H2", 10)) {
         //3H2
         p.set(CameraParameters::KEY_SUPPORTED_PREVIEW_SIZES,
               "720x480,640x384,640x360,640x480,320x240,528x432,176x144");
@@ -195,7 +193,7 @@ void CameraHardwareSec::initDefaultParameters(int cameraId)
               "3248x2436,3216x2144,3200x1920,3072x1728,2560x1920,1920x1080,1440x1080,1280x720,1232x1008,800x480,720x480,640x480");
         p.set(CameraParameters::KEY_SUPPORTED_VIDEO_SIZES,
               "1920x1080,1280x720,640x480,176x144");
-    } else if (!strncmp(CameraSensorName, "S5K4E5", 10)) {
+    } else if (!strncmp(mCameraSensorName, "S5K4E5", 10)) {
         //4E5
         p.set(CameraParameters::KEY_SUPPORTED_PREVIEW_SIZES,
               "720x480,640x384,640x360,640x480,320x240,528x432,176x144");
@@ -203,7 +201,7 @@ void CameraHardwareSec::initDefaultParameters(int cameraId)
               "2560x1920,1920x1080,1440x1080,1280x720,1232x1008,800x480,720x480,640x480");
         p.set(CameraParameters::KEY_SUPPORTED_VIDEO_SIZES,
               "1920x1080,1280x720,640x480,176x144");
-    } else if (!strncmp(CameraSensorName, "S5K3H7", 10)) {
+    } else if (!strncmp(mCameraSensorName, "S5K3H7", 10)) {
         //3H7
         p.set(CameraParameters::KEY_SUPPORTED_PREVIEW_SIZES,
               "720x480,640x384,640x360,640x480,320x240,528x432,176x144");
@@ -211,7 +209,7 @@ void CameraHardwareSec::initDefaultParameters(int cameraId)
               "3248x2436,3216x2144,3200x1920,3072x1728,2560x1920,1920x1080,1440x1080,1280x720,1232x1008,800x480,720x480,640x480");
         p.set(CameraParameters::KEY_SUPPORTED_VIDEO_SIZES,
               "1920x1080,1280x720,640x480,176x144");
-    } else if (!strncmp(CameraSensorName, "S5C73M3", 10)) {
+    } else if (!strncmp(mCameraSensorName, "S5C73M3", 10)) {
         //M5MO
         p.set(CameraParameters::KEY_SUPPORTED_PREVIEW_SIZES,
               "3264x2448,1920x1080,1280x720,800x480,720x480,640x480,320x240,528x432,176x144");
@@ -219,7 +217,7 @@ void CameraHardwareSec::initDefaultParameters(int cameraId)
               "3264x2448,3264x1968,2048x1536,2048x1232,800x480,640x480");
         p.set(CameraParameters::KEY_SUPPORTED_VIDEO_SIZES,
               "1920x1080,1280x720,640x480,176x144");
-    } else if (!strncmp(CameraSensorName, "S5K6A3", 10)) {
+    } else if (!strncmp(mCameraSensorName, "S5K6A3", 10)) {
         //6A3
         p.set(CameraParameters::KEY_SUPPORTED_PREVIEW_SIZES,
               "640x480,640x360,480x480,352x288,320x240,176x144");

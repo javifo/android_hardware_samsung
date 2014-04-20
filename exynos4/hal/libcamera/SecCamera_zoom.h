@@ -538,7 +538,7 @@ public:
     int             setDataLineCheckStop(void);
     int             setDefultIMEI(int imei);
     int             getDefultIMEI(void);
-    const __u8*     getCameraSensorName(void);
+    const char*     getCameraSensorName(void);
     bool             getUseInternalISP(void);
     bool            setMaxSize(void);
 #ifdef ENABLE_ESD_PREVIEW_CHECK
@@ -608,6 +608,7 @@ private:
     int             m_preview_state;
     int             m_snapshot_state;
     int             m_camera_id;
+    const char     *m_camera_sensor_name;
     bool            m_camera_use_ISP;
 
     int             m_cam_fd;

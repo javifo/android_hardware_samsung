@@ -186,7 +186,7 @@ static int fimc_v4l2_querycap_m2m(int fp)
     return 0;
 }
 
-static const __u8* fimc_v4l2_enuminput(int fp, int index)
+static const char* fimc_v4l2_enuminput(int fp, int index)
 {
     static struct v4l2_input input;
 
@@ -195,9 +195,9 @@ static const __u8* fimc_v4l2_enuminput(int fp, int index)
         ALOGE("ERR(%s):No matching index found", __func__);
         return NULL;
     }
-    ALOGI("Name of input channel[%d] is %s", input.index, input.name);
+    ALOGI("%s Name of input channel[%d] is %s", __func__, input.index, input.name);
 
-    return input.name;
+    return (const char *) input.name;
 }
 
 static int fimc_v4l2_s_input(int fp, int index)
@@ -653,6 +653,7 @@ SecCamera::SecCamera() :
             m_preview_state(0),
             m_snapshot_state(0),
             m_camera_id(CAMERA_ID_BACK),
+            m_camera_sensor_name(NULL),
             m_camera_use_ISP(0),
             m_cam_fd(-1),
             m_cam_fd2(-1),
@@ -817,6 +818,7 @@ int SecCamera::createFimc(int *fp, char *dev_name, int mode, int index)
 {
     struct v4l2_format fmt;
     int ret = 0;
+    const char* sensor_name = NULL;
 
     *fp = open(dev_name, O_RDWR);
     if (fp < 0) {
@@ -829,10 +831,13 @@ int SecCamera::createFimc(int *fp, char *dev_name, int mode, int index)
         ret = fimc_v4l2_querycap(*fp);
         CHECK(ret);
 
-        if (!fimc_v4l2_enuminput(*fp, index)) {
+        sensor_name = fimc_v4l2_enuminput(*fp, index);
+
+        if (!sensor_name) {
             ALOGE("m_cam_fd(%d) fimc_v4l2_enuminput fail", *fp);
             return -1;
-        }
+        } else if (!m_camera_sensor_name)
+            m_camera_sensor_name = sensor_name;
 
         ret = fimc_v4l2_s_input(*fp, index);
         CHECK(ret);
@@ -4388,28 +4393,29 @@ int SecCamera::setDataLineCheckStop(void)
     return 0;
 }
 
-const __u8* SecCamera::getCameraSensorName(void)
+const char* SecCamera::getCameraSensorName(void)
 {
     ALOGV("%s", __func__);
 
-    return fimc_v4l2_enuminput(m_cam_fd, getCameraId());
+    return m_camera_sensor_name;
 }
 
 bool SecCamera::getUseInternalISP(void)
 {
     ALOGV("%s", __func__);
     int ret = 0;
+    const char *sensor_name = getCameraSensorName();
 
 /*TODO*/
-    if (!strncmp((const char*)getCameraSensorName(), "ISP Camera", 10))
+    if (!strncmp(sensor_name, "ISP Camera", 10))
         return true;
-    else if(!strncmp((const char*)getCameraSensorName(), "S5K3H2", 10))
+    else if(!strncmp(sensor_name, "S5K3H2", 10))
         return true;
-    else if(!strncmp((const char*)getCameraSensorName(), "S5K3H7", 10))
+    else if(!strncmp(sensor_name, "S5K3H7", 10))
         return true;
-    else if(!strncmp((const char*)getCameraSensorName(), "S5K4E5", 10))
+    else if(!strncmp(sensor_name, "S5K4E5", 10))
         return true;
-    else if(!strncmp((const char*)getCameraSensorName(), "S5K6A3", 10))
+    else if(!strncmp(sensor_name, "S5K6A3", 10))
         return true;
     else
         return false;
@@ -4417,39 +4423,41 @@ bool SecCamera::getUseInternalISP(void)
 
 bool SecCamera::setMaxSize(void)
 {
-    ALOGV("%s", __func__);
+    const char *sensor_name = getCameraSensorName();
 
-    if (!strncmp((const char*)getCameraSensorName(), "ISP Camera", 10)) {
+	ALOGV("%s", __func__);
+
+    if (!strncmp(sensor_name, "ISP Camera", 10)) {
         m_preview_max_width   = 640;
         m_preview_max_height  = 480;
         m_snapshot_max_width  = 1392;
         m_snapshot_max_height = 1392;
         return true;
-    } else if(!strncmp((const char*)getCameraSensorName(), "S5K3H2", 10)) {
+    } else if(!strncmp(sensor_name, "S5K3H2", 10)) {
         m_preview_max_width   = 640;
         m_preview_max_height  = 480;
         m_snapshot_max_width  = 3248;
         m_snapshot_max_height = 2436;
         return true;
-    } else if(!strncmp((const char*)getCameraSensorName(), "S5K3H7", 10)) {
+    } else if(!strncmp(sensor_name, "S5K3H7", 10)) {
         m_preview_max_width   = 640;
         m_preview_max_height  = 480;
         m_snapshot_max_width  = 3248;
         m_snapshot_max_height = 2436;
         return true;
-    } else if(!strncmp((const char*)getCameraSensorName(), "S5K4E5", 10)) {
+    } else if(!strncmp(sensor_name, "S5K4E5", 10)) {
         m_preview_max_width   = 640;
         m_preview_max_height  = 480;
         m_snapshot_max_width  = 2560;
         m_snapshot_max_height = 1920;
         return true;
-    } else if(!strncmp((const char*)getCameraSensorName(), "S5K6A3", 10)) {
+    } else if(!strncmp(sensor_name, "S5K6A3", 10)) {
         m_preview_max_width   = 640;
         m_preview_max_height  = 480;
         m_snapshot_max_width  = 1392;
         m_snapshot_max_height = 1392;
         return true;
-    } else if(!strncmp((const char*)getCameraSensorName(), "M5MO", 10)) {
+    } else if(!strncmp(sensor_name, "M5MO", 10)) {
         m_preview_max_width   = 640;
         m_preview_max_height  = 480;
         m_snapshot_max_width  = 3264;

@@ -298,7 +298,7 @@ private:
 
 
     SecCamera           *mSecCamera;
-            const __u8  *mCameraSensorName;
+            const char  *mCameraSensorName;
             bool        mUseInternalISP;
 
     mutable Mutex       mSkipFrameLock;
