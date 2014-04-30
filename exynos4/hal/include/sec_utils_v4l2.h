@@ -48,10 +48,9 @@ extern "C" {
 #endif
 
 #include "videodev2.h"
-
-#ifdef __cplusplus
-}
-#endif
+#include <videodev2_samsung.h>
+#include <videodev2_exynos_camera.h>
+#include <videodev2_exynos_media.h>
 
 //---------------------------------------------------------//
 // Common structure                                        //
@@ -164,6 +163,7 @@ inline int V4L2_PIX_2_HAL_PIXEL_FORMAT(int V4L2_PIX)
 {
     int HAL_PIXEL_FORMAT = -1;
 
+    ALOGV("%s V4L2_PIX=%d, V4L2_PIX_FMT_NV21=%d", __func__, V4L2_PIX, V4L2_PIX_FMT_NV21);
     switch (V4L2_PIX) {
     case V4L2_PIX_FMT_RGB32:
         HAL_PIXEL_FORMAT = HAL_PIXEL_FORMAT_RGBA_8888;
@@ -323,5 +323,9 @@ inline unsigned int FRAME_SIZE(int HAL_PIXEL_FORMAT, int w, int h)
 
     return frame_size;
 }
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif //__SAMSUNG_SYSLSI_SEC_COMMON_H__

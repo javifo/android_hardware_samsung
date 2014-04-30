@@ -35,11 +35,21 @@
 
 #include <utils/RefBase.h>
 #include <hardware/camera.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <videodev2.h>
 #include <videodev2_samsung.h>
 #include <videodev2_exynos_camera.h>
 #include <videodev2_exynos_media.h>
 #include "sec_utils_v4l2.h"
+
+#ifdef __cplusplus
+}
+#endif
+
 #include "s5p_fimc.h"
 
 #include "SecBuffer.h"
@@ -176,6 +186,7 @@ namespace android {
 
 #ifdef SAMSUNG_EXYNOS4x12
 #define CAMERA_DEV_NAME3  "/dev/video1"
+#define CAMERA_DEV_NAME4  "/dev/video3"
 #ifdef ZERO_SHUTTER_LAG
 #define CAMERA_DEV_NAME2  "/dev/video2"
 #endif
@@ -358,6 +369,7 @@ public:
     int             setMode(int recording_en);
     int             openExynosMemDev(int *fp);
 
+    int             initFimc(int index);
     int             createFimc(int *fp, char *dev_name, int mode, int index);
     int             setFimc(void);
     int             setFimcForPreview(void);
@@ -615,11 +627,9 @@ private:
     int             m_prev_fd;
     struct pollfd   m_events_c;
 
-    int             m_cam_fd2;
     int             m_cap_fd;
     struct pollfd   m_events_c2;
 
-    int             m_cam_fd3;
     int             m_rec_fd;
     struct pollfd   m_events_c3;
     int             m_flag_record_start;

@@ -23,7 +23,7 @@
 *************************************
 */
 
-//#define LOG_NDEBUG 0
+#define LOG_NDEBUG 0
 #define LOG_TAG "SecCamera"
 
 #include <utils/Log.h>
@@ -656,8 +656,6 @@ SecCamera::SecCamera() :
             m_camera_sensor_name(NULL),
             m_camera_use_ISP(0),
             m_cam_fd(-1),
-            m_cam_fd2(-1),
-            m_cam_fd3(-1),
             m_prev_fd(-1),
             m_prev_mapped_addr(NULL),
             m_rec_mapped_addr(NULL),
@@ -672,12 +670,12 @@ SecCamera::SecCamera() :
             m_mem_fd(-1),
 #endif
             m_flag_record_start(0),
-            m_preview_v4lformat(V4L2_PIX_FMT_YVU420),
+            m_preview_v4lformat(V4L2_PIX_FMT_NV21),
             m_preview_width      (0),
             m_preview_height     (0),
             m_preview_max_width  (MAX_BACK_CAMERA_PREVIEW_WIDTH),
             m_preview_max_height (MAX_BACK_CAMERA_PREVIEW_HEIGHT),
-            m_snapshot_v4lformat(V4L2_PIX_FMT_NV16),
+            m_snapshot_v4lformat(V4L2_PIX_FMT_JPEG),
             m_snapshot_width      (0),
             m_snapshot_height     (0),
             m_num_capbuf          (0),
@@ -767,6 +765,7 @@ bool SecCamera::CreateCamera(int index)
             return  -1;
         }
 
+        /* Only use s_fmt when starting preview
         if (m_camera_use_ISP) {
             if (!m_recording_en)
                 fimc_v4l2_s_fmt_is(m_cam_fd, m_preview_max_width, m_preview_max_height,
@@ -779,36 +778,51 @@ bool SecCamera::CreateCamera(int index)
         ret = fimc_v4l2_s_fmt(m_cam_fd, m_preview_max_width, m_preview_max_height,
                       m_preview_v4lformat, V4L2_FIELD_ANY, PREVIEW_NUM_PLANE);
         CHECK(ret);
+        */
 
         initParameters(m_camera_use_ISP);
 
-        if (m_camera_use_ISP) {
-            /* FIMC2 open for recording and zsl, video snapshot m2m */
-            ret = createFimc(&m_cam_fd3, CAMERA_DEV_NAME2, V4L2_BUF_TYPE_VIDEO_OUTPUT, index);
-            CHECK(ret);
-
-            /* FIMC1 open for preview m2m */
-            ret = createFimc(&m_cam_fd2, CAMERA_DEV_NAME3, V4L2_BUF_TYPE_VIDEO_OUTPUT, index);
-            CHECK(ret);
-        } else {
-            /* FIMC1 open */
-            ret = createFimc(&m_cam_fd2, CAMERA_DEV_NAME3, V4L2_BUF_TYPE_VIDEO_CAPTURE, index);
-            CHECK(ret);
-        }
-
         setExifFixedAttribute();
+    }
 
-        if (m_camera_use_ISP) {
-            m_prev_fd = m_cam_fd2;
-            m_cap_fd = m_cam_fd3;
-            m_rec_fd = m_cam_fd3;
-            m_num_capbuf = CAP_BUFFERS;
-        } else {
-            m_prev_fd = m_cam_fd;
-            m_cap_fd = m_cam_fd;
-            m_rec_fd = m_cam_fd2;
-            m_num_capbuf = 1;
-        }
+    return 0;
+}
+
+int SecCamera::initFimc(int index)
+{
+	int ret = 0;
+
+	ALOGV("%s :", __func__);
+    if (m_camera_use_ISP) {
+        /* FIMC2 open for recording and zsl, video snapshot m2m */
+        ret = createFimc(&m_rec_fd, CAMERA_DEV_NAME2, V4L2_BUF_TYPE_VIDEO_OUTPUT, index);
+        CHECK(ret);
+
+        /* FIMC1 open for preview m2m */
+        ret = createFimc(&m_prev_fd, CAMERA_DEV_NAME3, V4L2_BUF_TYPE_VIDEO_OUTPUT, index);
+        CHECK(ret);
+    } else {
+        /* FIMC1 open for preview m2m */
+        ret = createFimc(&m_prev_fd, CAMERA_DEV_NAME3, V4L2_BUF_TYPE_VIDEO_OUTPUT, index);
+        CHECK(ret);
+
+        ret = setFimcForPreview();
+        CHECK(ret);
+
+        /* FIMC3 open for recording */
+        ret = createFimc(&m_rec_fd, CAMERA_DEV_NAME4, V4L2_BUF_TYPE_VIDEO_OUTPUT, index);
+        CHECK(ret);
+
+        ret = setFimcForRecord();
+        CHECK(ret);
+    }
+
+    if (m_camera_use_ISP) {
+        m_cap_fd = m_rec_fd;
+        m_num_capbuf = CAP_BUFFERS;
+    } else {
+        m_cap_fd = m_cam_fd;
+        m_num_capbuf = 1;
     }
 
     return 0;
@@ -897,18 +911,18 @@ bool SecCamera::DestroyCamera()
             m_cam_fd = -1;
         }
 
-        ALOGI("DestroyCamera: m_cam_fd2(%d)", m_cam_fd2);
-        if (m_cam_fd2 > -1) {
-            if (close(m_cam_fd2) < 0)
-                ALOGE("++ fail close fd %d", m_cam_fd2);
-            m_cam_fd2 = -1;
+        ALOGI("DestroyCamera: m_prev_fd(%d)", m_prev_fd);
+        if (m_prev_fd > -1) {
+            if (close(m_prev_fd) < 0)
+                ALOGE("++ fail close fd %d", m_prev_fd);
+            m_prev_fd = -1;
         }
 
-        ALOGI("DestroyCamera: m_cam_fd3(%d)", m_cam_fd3);
-        if (m_cam_fd3 > -1) {
-            if (close(m_cam_fd3) < 0)
-                ALOGE("++ fail close fd %d", m_cam_fd3);
-            m_cam_fd3 = -1;
+        ALOGI("DestroyCamera: m_rec_fd(%d)", m_rec_fd);
+        if (m_rec_fd > -1) {
+            if (close(m_rec_fd) < 0)
+                ALOGE("++ fail close fd %d", m_rec_fd);
+            m_rec_fd = -1;
         }
 
 #ifdef IS_FW_DEBUG
@@ -1024,6 +1038,12 @@ int SecCamera::startPreview(void)
         return -1;
     }
 
+    ret = initFimc(m_camera_id); //TODO - remove input param when it works
+	if (ret < 0) {
+		ALOGE("ERR(%s):Fail on Fimc init", __func__);
+		return -1;
+	}
+
     ret = setFimc();
     CHECK(ret);
 
@@ -1056,7 +1076,7 @@ int SecCamera::startPreview(void)
 
 int SecCamera::setFimc(void)
 {
-    ALOGV("%s", __func__);
+    ALOGV("%s m_preview_v4lformat=%d V4L2_PIX_FMT_NV21=%d", __func__, m_preview_v4lformat, V4L2_PIX_FMT_NV21);
     int ret;
 
     memset(&m_events_c, 0, sizeof(m_events_c));
@@ -1153,6 +1173,7 @@ int SecCamera::setFimcForPreview(void)
     int ret = 0;
     unsigned int paddr = 0;
     struct v4l2_control vc;
+    int value = 0;
 
     ALOGV("%s", __func__);
 
@@ -1163,10 +1184,12 @@ int SecCamera::setFimcForPreview(void)
     vc.value = 0;
     ret = ioctl(m_prev_fd, VIDIOC_G_CTRL, &vc);
     if (ret < 0) {
-        ALOGE("Err(%s): VIDIOC_G_CTRL - V4L2_CID_RESERVED_MEM_BAES_ADDR (%d)", __func__, ret);
+        ALOGE("Err(%s): VIDIOC_G_CTRL - V4L2_CID_RESERVED_MEM_BASE_ADDR (%d)", __func__, ret);
         return false;
     }
     paddr = (unsigned int)vc.value;
+
+    /* somehow setFimcDst is called for m_rec_fd (fimc3) when recording starts
 
     size_t size = DEV_NAME3_RESERVED_SIZE * 1024;
 
@@ -1179,6 +1202,30 @@ int SecCamera::setFimcForPreview(void)
 
     ret = setFimcDst(m_prev_fd, m_preview_width, m_preview_height, m_preview_v4lformat, (unsigned int)paddr);
     CHECK(ret);
+    */
+
+    // TODO - What to do with returning value?
+    vc.id = V4L2_CID_RESERVED_MEM_SIZE;
+    vc.value = 0;
+    ret = ioctl(m_prev_fd, VIDIOC_G_CTRL, &vc);
+    if (ret < 0) {
+        ALOGE("Err(%s): VIDIOC_G_CTRL - V4L2_CID_RESERVED_MEM_SIZE (%d)", __func__, ret);
+        return false;
+    }
+
+    // TODO - What to do with returning value?
+    vc.id = V4L2_CID_FIMC_VERSION;
+    vc.value = 0;
+    ret = ioctl(m_prev_fd, VIDIOC_G_CTRL, &vc);
+    if (ret < 0) {
+        ALOGE("Err(%s): VIDIOC_G_CTRL - V4L2_CID_FIMC_VERSION (%d)", __func__, ret);
+        return false;
+    }
+
+    if (fimc_v4l2_s_ctrl(m_prev_fd, V4L2_CID_OVLY_MODE, FIMC_OVLY_NONE_MULTI_BUF) < 0) {
+        ALOGE("ERR(%s):Fail on V4L2_CID_OVLY_MODE", __func__);
+        return false;
+    }
 
     return 0;
 }
@@ -1198,7 +1245,7 @@ int SecCamera::setFimcForRecord()
     vc.value = 0;
     ret = ioctl(m_rec_fd, VIDIOC_G_CTRL, &vc);
     if (ret < 0) {
-        ALOGE("Err(%s): VIDIOC_G_CTRL - V4L2_CID_RESERVED_MEM_BAES_ADDR (%d)", __func__, ret);
+        ALOGE("Err(%s): VIDIOC_G_CTRL - V4L2_CID_RESERVED_MEM_BASE_ADDR (%d)", __func__, ret);
         return false;
     }
     paddr = (unsigned int)vc.value;
@@ -1226,6 +1273,30 @@ int SecCamera::setFimcForRecord()
         m_buffers_record[i].size.extS[0] = frame_size;
     }
 
+    // TODO - What to do with returning value?
+    vc.id = V4L2_CID_RESERVED_MEM_SIZE;
+    vc.value = 0;
+    ret = ioctl(m_rec_fd, VIDIOC_G_CTRL, &vc);
+    if (ret < 0) {
+        ALOGE("Err(%s): VIDIOC_G_CTRL - V4L2_CID_RESERVED_MEM_SIZE (%d)", __func__, ret);
+        return false;
+    }
+
+    // TODO - What to do with returning value?
+    vc.id = V4L2_CID_FIMC_VERSION;
+    vc.value = 0;
+    ret = ioctl(m_rec_fd, VIDIOC_G_CTRL, &vc);
+    if (ret < 0) {
+        ALOGE("Err(%s): VIDIOC_G_CTRL - V4L2_CID_FIMC_VERSION (%d)", __func__, ret);
+        return false;
+    }
+
+    if (fimc_v4l2_s_ctrl(m_rec_fd, V4L2_CID_OVLY_MODE, FIMC_OVLY_NONE_MULTI_BUF) < 0) {
+        ALOGE("ERR(%s):Fail on V4L2_CID_OVLY_MODE", __func__);
+        return false;
+    }
+
+    //TODO - we don't really have started to record
     m_flag_record_start = 1;
 
     return 0;
@@ -2239,9 +2310,14 @@ int SecCamera::setPreviewSize(int width, int height, int pixel_format)
 
 int SecCamera::getPreviewSize(int *width, int *height, int *frame_size)
 {
+	int pixel_fmt = 0;
+
+	ALOGV("%s m_preview_v4lformat=%d m_preview_width=%d m_preview_height=%d", __func__, m_preview_v4lformat, m_preview_width, m_preview_height);
     *width  = m_preview_width;
     *height = m_preview_height;
-    *frame_size = FRAME_SIZE(V4L2_PIX_2_HAL_PIXEL_FORMAT(m_preview_v4lformat), *width, *height);
+    pixel_fmt = V4L2_PIX_2_HAL_PIXEL_FORMAT(m_preview_v4lformat);
+    *frame_size = FRAME_SIZE(pixel_fmt, *width, *height);
+    ALOGV("%s width=%d height=%d frame_size=%d", __func__, *width, *height, *frame_size);
     return 0;
 }
 
@@ -2250,6 +2326,7 @@ int SecCamera::getPreviewSrcSize(int *width, int *height, int *frame_size)
     *width  = m_sensor_width;
     *height = m_sensor_height;
     *frame_size = FRAME_SIZE(V4L2_PIX_2_HAL_PIXEL_FORMAT(m_preview_v4lformat), *width, *height);
+    ALOGV("%s width=%d height=%d frame_size=%d", __func__, *width, *height, *frame_size);
     return 0;
 }
 
@@ -2263,6 +2340,7 @@ int SecCamera::getPreviewMaxSize(int *width, int *height)
 
 int SecCamera::getPreviewPixelFormat(void)
 {
+	ALOGV("%s m_preview_v4lformat=%d", __func__, m_preview_v4lformat);
     return m_preview_v4lformat;
 }
 

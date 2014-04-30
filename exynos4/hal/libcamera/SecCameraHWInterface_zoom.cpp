@@ -15,7 +15,7 @@
 ** See the License for the specific language governing permissions and
 ** limitations under the License.
 */
-//#define LOG_NDEBUG 0
+#define LOG_NDEBUG 0
 #define LOG_TAG "CameraHardwareSec"
 #include <utils/Log.h>
 
@@ -212,7 +212,7 @@ void CameraHardwareSec::initDefaultParameters(int cameraId)
     } else if (!strncmp(mCameraSensorName, "S5C73M3", 10)) {
         //M5MO
         p.set(CameraParameters::KEY_SUPPORTED_PREVIEW_SIZES,
-              "3264x2448,1920x1080,1280x720,800x480,720x480,640x480,320x240,528x432,176x144");
+              "1920x1080,1280x720,800x480,720x480,640x480,320x240,528x432,176x144");
         p.set(CameraParameters::KEY_SUPPORTED_PICTURE_SIZES,
               "3264x2448,3264x1968,2048x1536,2048x1232,800x480,640x480");
         p.set(CameraParameters::KEY_SUPPORTED_VIDEO_SIZES,
@@ -247,7 +247,7 @@ void CameraHardwareSec::initDefaultParameters(int cameraId)
     parameterString.append(",");
     parameterString.append(CameraParameters::PIXEL_FORMAT_YUV420SP);
     p.set(CameraParameters::KEY_SUPPORTED_PREVIEW_FORMATS, parameterString);
-    p.setPreviewFormat(CameraParameters::PIXEL_FORMAT_YUV420P);
+    p.setPreviewFormat(CameraParameters::PIXEL_FORMAT_YUV420SP);
     mFrameSizeDelta = 16;
     p.set(CameraParameters::KEY_VIDEO_FRAME_FORMAT, CameraParameters::PIXEL_FORMAT_YUV420SP);
     p.setPreviewSize(preview_max_width, preview_max_height);
@@ -2505,7 +2505,7 @@ status_t CameraHardwareSec::setParameters(const CameraParameters& params)
         else if (!strcmp(new_str_picture_format, "uyv422i")) //Non-zero copy UYVY format
             new_picture_format = V4L2_PIX_FMT_UYVY;
         else if (!strcmp(new_str_picture_format, CameraParameters::PIXEL_FORMAT_JPEG))
-            new_picture_format = V4L2_PIX_FMT_NV16;
+            new_picture_format = V4L2_PIX_FMT_JPEG;
         else if (!strcmp(new_str_picture_format, "yuv422p"))
             new_picture_format = V4L2_PIX_FMT_YUV422P;
         else
