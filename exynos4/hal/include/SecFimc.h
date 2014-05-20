@@ -23,9 +23,6 @@
  * <b>Revision History: </b>
  * - 2010/10/13 : Hyunkyung, Kim(hk310.kim@samsung.com) \n
  *   Initial version
- *
- * - 2011/11/15 : Sunmi, Lee(carrotsm.lee@samsung.com) \n
- *   Adjust V4L2 architecture \n
  */
 
 #ifndef __SEC_FIMC_H__
@@ -52,13 +49,8 @@ extern "C" {
 
 #include "utils/Timers.h"
 
-#ifdef BOARD_USE_V4L2
-#include "s5p_fimc_v4l2.h"
-#include "sec_utils_v4l2.h"
-#else
 #include "s5p_fimc.h"
 #include "sec_utils.h"
-#endif
 #include "sec_format.h"
 
 #include "SecBuffer.h"
@@ -75,7 +67,7 @@ extern "C" {
 class SecFimc
 {
 public:
-    enum DEV {
+    enum FIMC_DEV {
         DEV_0 = 0,
         DEV_1,
         DEV_2,
@@ -83,24 +75,27 @@ public:
         DEV_MAX,
     };
 
-    enum MODE {
+/*    enum MODE {
         MODE_NONE = 0,
         MODE_SINGLE_BUF,
         MODE_MULTI_BUF,
         MODE_DMA_AUTO,
         MODE_MAX,
-    };
-
+    };*/
 private:
     bool                        mFlagCreate;
     int                         mDev;
-    int                         mFimcMode;
+    fimc_overlay_mode           mFimcMode;
     int                         mNumOfBuf;
 
     int                         mRealDev;
     int                         mFd;
     int                         mHwVersion;
+    unsigned int                mRsrvedMemSize;
+    unsigned int                mRsrvedPhysMemAddress;
     int                         mRotVal;
+    int                         mHFlipVal;
+    int                         mVFlipVal;
     bool                        mFlagGlobalAlpha;
     int                         mGlobalAlpha;
     bool                        mFlagLocalAlpha;
@@ -111,7 +106,19 @@ private:
     bool                        mFlagStreamOn;
 
     s5p_fimc_t                  mS5pFimc;
+    s5p_fimc_img_info           mS5pFimcImgInfo;
     struct v4l2_capability      mFimcCap;
+    fimc_buf                    mFimcBuffer;
+
+    unsigned int                mDstPhyYAddr;
+    unsigned int                mDstPhyCbAddr;
+    unsigned int                mDstPhyCrAddr;
+
+    unsigned int                mDstPhyYLen;
+    unsigned int                mDstPhyCbLen;
+    unsigned int                mDstPhyCrLen;
+
+    bool                        mYAddrDiffThanPhysMemAddress; //TODO: rename to a proper name
 
     SecBuffer                   mSrcBuffer;
     SecBuffer                   mDstBuffer[MAX_DST_BUFFERS];
@@ -120,66 +127,78 @@ public:
     SecFimc();
     virtual ~SecFimc();
 
-    virtual bool create(enum DEV dev, enum MODE mode, int numOfBuf);
-    virtual bool destroy(void);
+    bool create(enum FIMC_DEV dev, enum fimc_overlay_mode mode, unsigned int numOfBuf);
+    bool destroy(void);
     bool flagCreate(void);
 
-    int  getFd(void);
+    int getSecFimcFd(void);
 
-    SecBuffer * getMemAddr(int index = 0);
+    //SecBuffer * getMemAddr(int index = 0);
 
     int  getHWVersion(void);
 
-    virtual bool setSrcParams(unsigned int width, unsigned int height,
+    bool setSrcParams(unsigned int width, unsigned int height,
                       unsigned int cropX, unsigned int cropY,
                       unsigned int *cropWidth, unsigned int *cropHeight,
                       int colorFormat,
                       bool forceChange = true);
 
-    virtual bool getSrcParams(unsigned int *width, unsigned int *height,
+    bool getSrcParams(unsigned int *width, unsigned int *height,
                       unsigned int *cropX, unsigned int *cropY,
                       unsigned int *cropWidth, unsigned int *cropHeight,
                       int *colorFormat);
 
-    virtual bool setSrcAddr(unsigned int physYAddr,
+    bool setSrcAddr(unsigned int physYAddr,
                     unsigned int physCbAddr = 0,
                     unsigned int physCrAddr = 0,
                     int colorFormat = 0);
 
-    virtual bool setDstParams(unsigned int width, unsigned int height,
+    bool setDstParams(unsigned int width, unsigned int height,
                       unsigned int cropX, unsigned int cropY,
                       unsigned int *cropWidth, unsigned int *cropHeight,
                       int colorFormat,
                       bool forceChange = true);
 
-    virtual bool getDstParams(unsigned int *width, unsigned int *height,
+    bool getDstParams(unsigned int *width, unsigned int *height,
                       unsigned int *cropX, unsigned int *cropY,
                       unsigned int *cropWidth, unsigned int *cropHeight,
                       int *colorFormat);
 
-    virtual bool setDstAddr(unsigned int physYAddr, unsigned int physCbAddr = 0, unsigned int physCrAddr = 0, int buf_index = 0);
+    bool setDstAddr(unsigned int physYAddr, unsigned int physCbAddr = 0, unsigned int physCrAddr = 0, int buf_index = 0);
+    bool setDstPhyAddr(unsigned int physYAddr, unsigned int physCbAddr, unsigned int physCrAddr);
 
-    virtual bool setRotVal(unsigned int rotVal);
-    virtual bool setGlobalAlpha(bool enable = true, int alpha = 0xff);
-    virtual bool setLocalAlpha(bool enable);
-    virtual bool setColorKey(bool enable = true, int colorKey = 0xff);
+    bool setRotVal(unsigned int rotVal);
+    bool setGlobalAlpha(bool enable = true, int alpha = 0xff);
+    bool setLocalAlpha(bool enable);
+    bool setColorKey(bool enable = true, int colorKey = 0xff);
+    bool setTransform(unsigned int rotVal);
+    bool streamOn(void);
+    bool streamOff(void);
 
-    virtual bool draw(int src_index, int dst_index);
+    bool clearBuffer(void);
+    bool dequeueBuffer(int *something);
+
+    unsigned int getFimcRsrvedMemSize(void);
+    unsigned int getFimcRsrvedPhysMemAddr(void);
+    unsigned int getFimcVersion(void);
+
+    bool draw(int src_index, int dst_index);
 
 private:
     bool m_streamOn(void);
-    bool m_checkSrcSize(unsigned int width, unsigned int height,
+    bool checkFimcSrcSize(unsigned int width, unsigned int height,
                         unsigned int cropX, unsigned int cropY,
                         unsigned int *cropWidth, unsigned int *cropHeight,
                         int colorFormat,
                         bool forceChange = false);
 
-    bool m_checkDstSize(unsigned int width, unsigned int height,
+    bool checkFimcDstSize(unsigned int width, unsigned int height,
                         unsigned int cropX, unsigned int cropY,
                         unsigned int *cropWidth, unsigned int *cropHeight,
                         int colorFormat,
                         int rotVal,
                         bool forceChange = false);
+
     int  m_widthOfFimc(int v4l2ColorFormat, int width);
     int  m_heightOfFimc(int v4l2ColorFormat, int height);
     int  m_getYuvBpp(unsigned int fmt);
